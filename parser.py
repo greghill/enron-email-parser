@@ -1,6 +1,8 @@
 import os
 import re
 pattern = re.compile(r"[^@]+@[^@]+\.[^@]+")
+pattern2 = re.compile(r"^[a-z'A-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+twoperiods = re.compile(r"\.\.")
 
 def parsefile(path):
     f=open(path, 'r')
@@ -10,7 +12,10 @@ def parsefile(path):
             if  words[0] == 'From:':
                 for word in words:
                     if pattern.match(word):
-                        #print word
+                        if word[0] == '<' and word[-1] == '>':
+                            word = word [1:-1]
+                        if twoperiods.match(word):
+                            print path + " has bad addr: " + word
                         f.close()
                         return
     print 'NO THING TO PARSE HERE: ' + path
@@ -18,6 +23,6 @@ def parsefile(path):
 
     
 
-for root,dirs,files in os.walk('.'):
+for root,dirs,files in os.walk('enron_email_full'):
     for afile in files:
         parsefile(root + '/' + afile)
