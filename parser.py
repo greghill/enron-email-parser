@@ -94,7 +94,7 @@ def parsefrom(line, path):
     else:
         print line
 
-def parse_multiline_to(line, f, path): #TODO delete path
+def parse_multiline_recipients(line, f, end_at): #TODO delete path
     recipients = []
     go = True
     num = 0
@@ -102,15 +102,20 @@ def parse_multiline_to(line, f, path): #TODO delete path
         num += 1
         recipients += (clean_email_list(line.split()))
         line = f.readline()
-        if line[:9] == 'Subject: ':
+        if line.startswith(end_at):
             break
     return recipients
+def add_to_heap(source, sinks, datetime, is_cc):
+    if len(sinks) > 0: # ignore if no sink passes regex
+       source_id = get_id(source)
+       sink_ids = (get_id(sink) for sink in sinks)
+       three_tuple = (datetime, source_id, sink_ids, is_cc)
+       heapq.heappush(emails, three_tuple)
 
 def parsefile(path):
     global adjlist
     global cnt
     global shit
-    global emails
     f=open(path, 'r')
     f.readline() # ignore first line
 
@@ -121,20 +126,14 @@ def parsefile(path):
     fromline = f.readline()
     assert(fromline[:6]  == 'From: ') # third line is From
     source = parsefrom(fromline[6:], path)
+    if source is None:
+        f.close()
+        return
 
     fourthline = f.readline() # fourth line is To or Subject
     if fourthline[:4] == 'To: ':
-        sinks = parse_multiline_to(fourthline[4:], f, path)
-        if source is not None and len(sinks) > 0: # ignore if source or no dest passes regex
-            source_id = get_id(source)
-            three_tuple = (datetime, source_id, sinks)
-            heapq.heappush(emails, three_tuple)
-            #if source_id not in adjlist:
-            #    adjlist[source_id] = []
-            #for sink in sinks:
-            #    sink_id = get_id(sink)
-            #    assert(sink_id is not None)
-            #    adjlist[source_id].append(sink_id)
+        sinks = parse_multiline_recipients(fourthline[4:], f, 'Subject: ')
+        add_to_heap(source, sinks, datetime, False)
 
     elif fourthline[:9] == 'Subject: ': # ignore if it doesnt have a to field
         shit += 1
@@ -142,7 +141,17 @@ def parsefile(path):
             print shit
     else:
         assert(False)
+
     # now look for CCs
+    next_line = f.readline()
+    while (not next_line[:4] == 'Cc: ' and not next_line[:14] == 'Mime-Version: '):
+        next_line = f.readline()
+
+    if next_line[:4] == 'Cc: ':
+        sinks = parse_multiline_recipients(next_line[4:], f, 'Mime-Version: ')
+        add_to_heap(source, sinks, datetime, True)
+    else:
+        assert(next_line[:14] == 'Mime-Version: ')
 
     f.close()
     cnt += 1
@@ -154,7 +163,11 @@ for root,dirs,files in os.walk('enron_email_full'):
 print cnt
 fileout = open('enron-adjlist.txt', 'w')
 fileout.write('# ' + str(max_id) + '\n')
-for (datetime, source_id, sink_list) in sorted(emails):
-    for sink in sink_list:
-        fileout.write(str(source) + ' '  + str(sink) + datetime + '\n')
+for (datetime, source_id, sink_list, is_cc) in sorted(emails):
+    if is_cc:
+        for sink in sink_list:
+            fileout.write(str(source_id) + ' '  + str(sink) + ' ' + str(datetime) + ' Cc: \n')
+    else:
+        for sink in sink_list:
+            fileout.write(str(source_id) + ' '  + str(sink) + ' ' + str(datetime) + ' To: \n')
 fileout.close()
