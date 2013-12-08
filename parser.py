@@ -16,8 +16,9 @@ def get_id(name):
     if name in name_map:
         return name_map[name]
     else:
-        name_map[name] = max_id
         max_id += 1
+        name_map[name] = max_id
+        return max_id
 
 def clean_email_list(wordlist):
     toRet = []
@@ -83,6 +84,9 @@ def parsefile(path):
                 adjlist[source_id] = []
             for sink in sinks:
                 sink_id = get_id(sink)
+                if sink_id is None:
+                    print "wtf " + sink
+                    print path
                 adjlist[source_id].append(sink_id)
 
     elif fourthline[:9] == 'Subject: ': # ignore if it doesnt have a to field
