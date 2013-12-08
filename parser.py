@@ -6,14 +6,20 @@ twoperiods = re.compile(r"\.\.")
 emails_list = re.compile(r"', '|' \r\n'")
 cnt = 0
 
-def clear_trailing_commas(wordlist):
+def clean_email_list(wordlist):
     toRet = []
     for word in wordlist:
-        #assert twoperiods.search(word) is None
-        if word[-1] == ',':
-            toRet.append(word[:-1])
-        else:
+        if pattern.match(word):
+            if word[:2] == "<.":
+                word = word[2:]
+            if word[-1] == ',':
+                word = word[:-1]
+            if word[-1] == '>':
+                word = word[:-1]
+
             toRet.append(word)
+        else:
+            print "dropped " + word
     return toRet
 
 def parsetime(words):
@@ -21,26 +27,29 @@ def parsetime(words):
         print words
     return True
 
-def parsefrom(words, path):
-    for word in words:
-        if pattern2.match(word):
-            if word[0] == '<' and word[-1] == '>':
-                print word
-                word = word [1:-1]
-            #if not (twoperiods.search(word) is None):
-            #    print path + " has bad addr: " + word
-            return True
-    return False
+def parsefrom(line, path):
+    words = clean_email_list(line.split())
+    if len(words) == 1:
+        return words[0]
+    else:
+        print line
+        #assert(False)
 
-def parse_multiline_to(firstline, f, path): #TODO delete path
-    recipients = firstline.split()[1:]
+def parse_multiline_to(line, f, path): #TODO delete path
+    recipients = []
+    go = True
+    while go:
+        recipients += (clean_email_list(line.split()))
+        line = f.readline()
+        if line[:9] == 'Subject: ':
+            break
     #nextline = f.readline()
     #while not nextline.split()[0][-1] == ':':
     #    recipients.append(emails_list.split(nextline))
     #    nextline = f.readline()
-    #if not nextline[:9] == 'Subject: ':
+    #
     #    print "FAILED ON: " + nextline 
-    return clear_trailing_commas(recipients)
+    return recipients
 
 
 def parseto(words, path):
@@ -72,17 +81,15 @@ def parsefile(path):
 
     fromline = f.readline()
     assert(fromline[:6]  == 'From: ') # third line is From
-    if not parsefrom(fromline[6:], path):
-        1+1
+    source = parsefrom(fromline[6:], path)
 
-    #fourthline = f.readline() # fourth line is To or Subject
-    #if fourthline[:4] == 'To: ':
-    #    sinks = parse_multiline_to(fourthline, f, path)
-    #    print sinks
-    #elif fourthline[:9] == 'Subject: ':
-    #    2 +2 
-    #else:
-    #    assert(False)
+    fourthline = f.readline() # fourth line is To or Subject
+    if fourthline[:4] == 'To: ':
+        sinks = parse_multiline_to(fourthline[4:], f, path)
+    elif fourthline[:9] == 'Subject: ':
+        2 +2 
+    else:
+        assert(False)
 
     #for line in f:
     #    line_number += 1
