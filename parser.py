@@ -15,6 +15,12 @@ shit = 0
 name_map = dict()
 max_id = 0
 
+def fix_year(year_str):
+    year_int = int(year_str)
+    if year_int == 0001:
+        year_int = 2001
+    return year_int
+
 def get_id(name):
     global name_map
     global max_id
@@ -85,7 +91,7 @@ def parsetime(words):
     #    timezone = pytz.pdt
     month = get_month(words[3])
     (hour, mins) =  get_hour_mins(words[5])
-    return datetime.datetime(int(words[4]), month, int(words[2]), hour, mins)
+    return datetime.datetime(fix_year(words[4]), month, int(words[2]), hour, mins)
 
 def parsefrom(line, path):
     words = clean_email_list(line.split())
@@ -120,8 +126,13 @@ def parsefile(path):
     f.readline() # ignore first line
 
     date = f.readline()
+    if not date[:6]  == 'Date: ':
+        print path
     assert(date[:6]  == 'Date: ') # second line is date
     datetime = parsetime(date.split())
+    if (datetime.year > 1979 and datetime.year < 1997) or datetime.year > 2004:
+        print datetime.year
+        print path
 
     fromline = f.readline()
     assert(fromline[:6]  == 'From: ') # third line is From
