@@ -47,10 +47,10 @@ def clean_email_list(wordlist):
         #    print "dropped " + word
     return toRet
 
-def get_hour_mins(word):
+def get_hms(word):
     times = word.split(':')
     assert len(times) == 3
-    return (int(times[0]),int(times[1]))
+    return (int(times[0]), int(times[1]), int(times[2]))
 
 def get_month(word):
     if word == 'Jan':
@@ -84,14 +84,14 @@ def get_month(word):
 def parsetime(words):
     assert(len(words) == 8)
     assert(words[-1] == '(PST)' or words[-1] == '(PDT)')
-# ignoring timezones for now
+    # ignoring timezones for now
     #if words[-1] == '(PST)':
     #    timezone = pytz.pst
     #else:
     #    timezone = pytz.pdt
     month = get_month(words[3])
-    (hour, mins) =  get_hour_mins(words[5])
-    return datetime.datetime(fix_year(words[4]), month, int(words[2]), hour, mins)
+    (hour, mins, secs) =  get_hms(words[5])
+    return datetime.datetime(fix_year(words[4]), month, int(words[2]), hour, mins, secs)
 
 def parsefrom(line, path):
     words = clean_email_list(line.split())
@@ -130,8 +130,9 @@ def parsefile(path):
         print path
     assert(date[:6]  == 'Date: ') # second line is date
     datetime = parsetime(date.split())
-    if (datetime.year > 1979 and datetime.year < 1997) or datetime.year > 2004:
-        print datetime.year
+    2004-02-03
+    if (datetime.year == 2004 and datetime.month == 02 and datetime.day == 03):
+        print datetime
         print path
 
     fromline = f.readline()
@@ -146,11 +147,7 @@ def parsefile(path):
         sinks = parse_multiline_recipients(fourthline[4:], f, 'Subject: ')
         add_to_heap(source, sinks, datetime, False)
 
-    elif fourthline[:9] == 'Subject: ': # ignore if it doesnt have a to field
-        shit += 1
-        if shit % 1000 == 0:
-            print shit
-    else:
+    elif not fourthline[:9] == 'Subject: ': # it doesnt have a 'To' field
         assert(False)
 
     # now look for CCs
