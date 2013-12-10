@@ -19,6 +19,8 @@ def fix_year(year_str):
     year_int = int(year_str)
     if year_int == 0001:
         year_int = 2001
+    elif year_int == 0002:
+        year_int = 2002
     return year_int
 
 def get_id(name):
